@@ -5,27 +5,25 @@
 
 #include <ncurses.h>
 #include <panel.h>
+#include "hexwindows.h"
 
 int main(void) {
 	// Start ncurses
-	initscr();
-	noecho();
-	curs_set(0);
-	refresh();
+	initialise_curses();
 
 	// Create first window and link it to a panel
-	WINDOW * window1 = newwin(10, 15, 5, 12);
-	box(window1, 0, 0);
+	WINDOW * window1;
+	PANEL * win1panel;
+	create_basic_window(&window1, &win1panel, 10, 15, 5, 12);
 	mvwaddstr(window1, 4, 3, "window 1");
 	wrefresh(window1);
-	PANEL * win1panel = new_panel(window1);
 	
 	// Add a second window and link it to a panel
-	WINDOW * window2 = newwin(10, 15, 8, 20);
-	box(window2, 0, 0);
+	WINDOW * window2;
+	PANEL * win2panel;
+	create_basic_window(&window2, &win2panel, 10, 15, 8, 20);
 	mvwaddstr(window2, 4, 3, "window2");
 	wrefresh(window2);
-	PANEL * win2panel = new_panel(window2);
 
 	int c, order = 1;
 
