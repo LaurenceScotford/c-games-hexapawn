@@ -13,37 +13,14 @@ int main(void) {
 	// Build the game windows
 	initialise_windows();
 
-	show_window(WIN_MAIN_MENU);
+	// Build the menus
+	initialise_menus();
 
-	int c;
-	
-	while ((c = getch()) != 'x') {
-		switch (c) {
-			case 'm':
-				show_window(WIN_MAIN_MENU);
-				break;
-			case 'i':
-				show_window(WIN_INSTRUCTIONS);
-				break;
-			case 'g':
-				show_window(WIN_GAME);
-				break;
-			case 'a':
-				show_window(WIN_AI);
-				break;
-			case 'h':
-				show_window(WIN_HISTORY);
-				break;
-			case 's':
-				show_window(WIN_SAVE);
-				break;
-			case 'l':
-				show_window(WIN_LOAD);
-				break;
-		}
-	}
+	// Start the main menu
+	main_menu_controller();
 
 	// End ncurses
+	destroy_menus();
 	endwin();
 
 	return 0;

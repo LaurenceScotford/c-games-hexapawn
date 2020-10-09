@@ -25,10 +25,30 @@ static struct hexwindow hexwindows[] = {
 	{WIN_LOAD, WT_MAIN, NULL, NULL, STR_LOAD_SUBTITLE}
 };
 
+static struct hexmenu hexmenus[] = {
+	// Main menu
+	{MENU_MAIN, WIN_MAIN_MENU, NULL, NULL, NULL, MAIN_MENU_Y, MAIN_MENU_X, MAIN_MENU_HEIGHT, MAIN_MENU_WIDTH, MAIN_MENU_ITEMS,
+		{STR_INSTRUCTIONS_SUBTITLE, 
+		STR_MENU_NEW, 
+		STR_MENU_RESUME,
+		STR_AI_SUBTITLE,
+		STR_HIST_SUBTITLE,
+		STR_SAVE_SUBTITLE,
+		STR_LOAD_SUBTITLE,
+		STR_MENU_RESET,
+		STR_MENU_EXIT,
+		(char *) NULL}}
+};
+
 // Initialise ncurses
 void initialise_curses(void)
 {
 	initscr();		// Start ncurses
+
+	if (LINES < WIN_MAIN_HEIGHT || COLS < WIN_MAIN_WIDTH) {
+		exit_with_error(STR_TERMINAL_TOO_SMALL);
+	}
+
 	cbreak();		// Disable line buffer
 	noecho();		// User input will not be echoed to screen
 	keypad(stdscr, TRUE);	// Enable special keyboard characters
@@ -41,10 +61,18 @@ void create_basic_window(WINDOW ** window, PANEL ** panel, int height, int width
 	// Create the window
 	*window = newwin(height, width, y, x);
 
+	if (*window == NULL) {
+		exit_with_error(STR_WINDOW_ERROR);
+	}
+
 	keypad(*window, TRUE);
 
 	// Add the window to a panel
 	*panel = new_panel(*window);
+
+	if (*panel == NULL) {
+		exit_with_error(STR_PANEL_ERROR);
+	}	
 
 	// Display a border around the window
 	box(*window, 0, 0);
@@ -95,4 +123,103 @@ void show_window(enum window_id win_id) {
 	top_panel(hex_win->p_ptr);
 	update_panels();
 	doupdate();
+}
+
+// Create the menus
+void initialise_menus() {
+	for (int i = 0; i < ARRAY_SIZE(hexmenus); i++) {
+		
+		// Create the menu items
+		hexmenus[i].menu_items = (ITEM **) calloc(hexmenus[i].num_items, sizeof(ITEM *));
+		
+		if (hexmenus[i].menu_items == NULL) {
+			exit_with_error(STR_MENU_ERROR);
+		}
+
+		for (int j = 0; j < hexmenus[i].num_items; j++) {
+			hexmenus[i].menu_items[j] = new_item(hexmenus[i].item_list[j], hexmenus[i].item_list[j]);
+
+			if (j < hexmenus[i].num_items - 1 && hexmenus[i].menu_items[j] == NULL) {
+				exit_with_error(STR_MENU_ERROR);
+			}
+		}
+
+		// Create the menu
+		hexmenus[i].menu = new_menu((ITEM **)hexmenus[i].menu_items);
+
+		if (hexmenus[i].menu == NULL) {
+			exit_with_error(STR_MENU_ERROR);
+		}
+
+		// Add menu to the relevant window
+		struct hexwindow * menu_window = get_hexwindow(hexmenus[i].window);
+		set_menu_win(hexmenus[i].menu, menu_window->w_ptr);
+		hexmenus[i].subwindow = derwin(menu_window->w_ptr, hexmenus[i].menu_height, hexmenus[i].menu_width, hexmenus[i].menu_y, hexmenus[i].menu_x);
+
+		if (hexmenus[i].subwindow == NULL) {
+			exit_with_error(STR_MENU_ERROR);
+		}
+
+		set_menu_sub(hexmenus[i].menu, hexmenus[i].subwindow);
+		set_menu_mark(hexmenus[i].menu, STR_MENU_MARK);
+
+		// Post the menu
+		post_menu(hexmenus[i].menu);
+	}
+}
+
+void destroy_menus() {
+	for (int i = 0; i < ARRAY_SIZE(hexmenus); i++) {
+		unpost_menu(hexmenus[i].menu);
+		free_menu(hexmenus[i].menu);
+		
+		for (int j = 0; j < hexmenus[i].num_items; j++) {
+			free_item(hexmenus[i].menu_items[j]);	
+		}		
+	}
+}
+
+// Return a pointer to the struct that matches the menu uid or NULL if no match is found
+struct hexmenu * get_hexmenu(enum menu_id m_id) {
+	for (int i = 0; i < ARRAY_SIZE(hexmenus); i++) {
+		if (hexmenus[i].uid == m_id) {
+			return &hexmenus[i];
+		}
+	}
+
+	return NULL;
+}
+
+// Handle navigation for the given menu and return the index of the selected item
+int menu_navigation(enum menu_id m_id) {
+	struct hexmenu * m_ptr = get_hexmenu(m_id);
+	struct hexwindow * ws_ptr = get_hexwindow(m_ptr->window);
+	int c;
+
+	while ((c = wgetch(ws_ptr->w_ptr)) != '\n') {
+		switch(c) {
+			case KEY_DOWN:
+				menu_driver(m_ptr->menu, REQ_DOWN_ITEM);
+				break;
+			case KEY_UP:
+				menu_driver(m_ptr->menu, REQ_UP_ITEM);
+				break;
+			case KEY_HOME:
+				menu_driver(m_ptr->menu, REQ_FIRST_ITEM);
+				break;
+			case KEY_END:
+				menu_driver(m_ptr->menu, REQ_LAST_ITEM);
+				break;
+		}
+		
+		show_window(m_ptr->window);
+	}
+
+	for (int i = 0; i < m_ptr->num_items; i++) {
+		if (current_item(m_ptr->menu) == m_ptr->menu_items[i]) {
+			return i;
+		}
+	}
+
+	return -1;
 }
