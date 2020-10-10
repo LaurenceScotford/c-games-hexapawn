@@ -10,5 +10,5 @@
 
 void instructions_controller() {
 	show_window(WIN_INSTRUCTIONS);
-	while(getch() != 'x');
+	while(wgetch(get_hexwindow(WIN_INSTRUCTIONS)->w_ptr) != 'x');
 }

@@ -10,5 +10,5 @@
 
 void ai_controller() {
 	show_window(WIN_AI);
-	while(getch() != 'x');
+	while(wgetch(get_hexwindow(WIN_AI)->w_ptr) != 'x');
 }

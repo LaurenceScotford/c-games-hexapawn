@@ -10,5 +10,5 @@
 
 void history_controller() {
 	show_window(WIN_HISTORY);
-	while(getch() != 'x');
+	while(wgetch(get_hexwindow(WIN_HISTORY)->w_ptr) != 'x');
 }

@@ -10,10 +10,10 @@
 
 void save_controller() {
 	show_window(WIN_SAVE);
-	while(getch() != 'x');
+	while(wgetch(get_hexwindow(WIN_SAVE)->w_ptr) != 'x');
 }
 
 void load_controller() {
 	show_window(WIN_LOAD);
-	while(getch() != 'x');
+	while(wgetch(get_hexwindow(WIN_LOAD)->w_ptr) != 'x');
 }

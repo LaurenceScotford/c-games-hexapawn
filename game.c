@@ -18,5 +18,5 @@ void resume_game_controller() {
 
 void play_game(enum game_mode mode) {
 	show_window(WIN_GAME);
-	while(getch() != 'x');
+	while(wgetch(get_hexwindow(WIN_GAME)->w_ptr) != 'x');
 }
