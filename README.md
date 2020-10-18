@@ -10,3 +10,5 @@ This project uses the [ncurses library](https://github.com/mirror/ncurses) inclu
 Currently only the windows and menu handling code are complete.
 
 The menu uses up and down arrow keys, HOME and END for navigation and return or enter to make a choice. When a sub-window is displayed, press x to return to the main menu.
+
+If you are interested, there's an ongoing [development diary](https://laurencescotford.com/games-programming-from-the-ground-up-with-c-hexapawn/) for this game.
