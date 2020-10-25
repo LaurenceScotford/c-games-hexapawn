@@ -1,9 +1,8 @@
-//
-// hexerror.c
-// Hexapawn
-//
-// Error handling routines for Hexapawn
-//
+/**
+ * @file hexerror.c
+ * @brief Error handling routines for Hexapawn
+ * @author Laurence Scotford
+ */
 
 #include "hexapawn.h"
 
