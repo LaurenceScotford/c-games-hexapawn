@@ -5,7 +5,7 @@ This project is currently in progress.
 
 To build work in progress download files and run **make**. Note that by default this creates an executable called **hexapawn** in the parent directory of the directory containing the source files. Please amend your local copy of makefile if you want to change this. If you want debugging symbols, run **make debug**
 
-This project uses the [ncurses library](https://github.com/mirror/ncurses) including the panel and menu sub-libraries, so you will need to install those first.
+This project uses the [ncurses library](https://github.com/mirror/ncurses) including the panel and menu sub-libraries, and the [apache portable runtime](https://apr.apache.org/) library, so you will need to install those first.
 
 Currently only the windows and menu handling code are complete.
 
