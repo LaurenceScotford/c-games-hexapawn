@@ -6,7 +6,6 @@
 //
 
 #include "hexapawn.h"
-#include "hexstrings.h"
 
 void (*funcPtrs[])(void) = {
 	&instructions_controller,
@@ -24,9 +23,10 @@ void main_menu_controller() {
 	show_window(WIN_MAIN_MENU);
 	
 	while (running > 0) {
-		int choice = menu_navigation(MENU_MAIN);
-		
-		if (choice != MENU_EXIT) {
+		// int choice = menu_navigation(MENU_MAIN);
+		int choice = navigation_dispatch(MENU_MAIN, FORM_NONE);
+
+    	if (choice != MENU_EXIT) {
 			(*funcPtrs[choice])();
 			show_window(WIN_MAIN_MENU);
 		} else {

@@ -5,38 +5,40 @@
  */
 
 #include "hexapawn.h"
-#include "hexstrings.h"
+
+static main_window_t main_windows[] = {
+	{STR_MENU_SUBTITLE},
+	{STR_INSTRUCTIONS_SUBTITLE},
+	{STR_GAME_SUBTITLE},
+	{STR_AI_SUBTITLE},
+	{STR_HIST_SUBTITLE},
+	{STR_SAVE_SUBTITLE},
+	{STR_LOAD_SUBTITLE}
+};
+
+static form_window_t form_windows[] = {
+	{FORM_PLAYER_MOVE}
+};
 
 static hexwindow_t hexwindows[] = {
 	// Main menu
-	{WIN_MAIN_MENU, WT_MAIN, NULL, NULL, STR_MENU_SUBTITLE},
+	{WIN_MAIN_MENU, WT_MAIN, WIN_NONE, NULL, NULL, &main_windows[0]},
 	// Instructions
-	{WIN_INSTRUCTIONS, WT_MAIN, NULL, NULL, STR_INSTRUCTIONS_SUBTITLE},
+	{WIN_INSTRUCTIONS, WT_MAIN, WIN_NONE, NULL, NULL, &main_windows[1]},
 	// Game
-	{WIN_GAME, WT_MAIN, NULL, NULL, STR_GAME_SUBTITLE},
+	{WIN_GAME, WT_MAIN, WIN_NONE, NULL, NULL, &main_windows[2]},
 	// AI
-	{WIN_AI, WT_MAIN, NULL, NULL, STR_AI_SUBTITLE},
+	{WIN_AI, WT_MAIN, WIN_NONE, NULL, NULL, &main_windows[3]},
 	// History
-	{WIN_HISTORY, WT_MAIN, NULL, NULL, STR_HIST_SUBTITLE},
+	{WIN_HISTORY, WT_MAIN, WIN_NONE, NULL, NULL, &main_windows[4]},
 	// Save
-	{WIN_SAVE, WT_MAIN, NULL, NULL, STR_SAVE_SUBTITLE},
+	{WIN_SAVE, WT_MAIN, WIN_NONE, NULL, NULL, &main_windows[5]},
 	// Load
-	{WIN_LOAD, WT_MAIN, NULL, NULL, STR_LOAD_SUBTITLE}
-};
-
-static hexmenu_t hexmenus[] = {
-	// Main menu
-	{MENU_MAIN, WIN_MAIN_MENU, NULL, NULL, NULL, MAIN_MENU_Y, MAIN_MENU_X, MAIN_MENU_HEIGHT, MAIN_MENU_WIDTH, MAIN_MENU_ITEMS,
-		{STR_INSTRUCTIONS_SUBTITLE, 
-		STR_MENU_NEW, 
-		STR_MENU_RESUME,
-		STR_AI_SUBTITLE,
-		STR_HIST_SUBTITLE,
-		STR_SAVE_SUBTITLE,
-		STR_LOAD_SUBTITLE,
-		STR_MENU_RESET,
-		STR_MENU_EXIT,
-		(char *) NULL}}
+	{WIN_LOAD, WT_MAIN, WIN_NONE, NULL, NULL, &main_windows[6]},
+	// Move form
+	{WIN_MOVE_FORM, WT_FORM, WIN_GAME, NULL, NULL, &form_windows[0]},
+	// Debug window
+	{WIN_DEBUG, WT_DEBUG, WIN_NONE, NULL, NULL, NULL}
 };
 
 /**
@@ -47,7 +49,9 @@ void initialise_curses(void)
 	initscr();		// Start ncurses
 
 	// Check that terminal window is of a sufficient size to play
-	if (LINES < WIN_MAIN_HEIGHT || COLS < WIN_MAIN_WIDTH) {
+	int num_lines = WIN_MAIN_HEIGHT + get_debug_mode() ? DEBUG_WIN_HEIGHT : 0;
+
+	if (LINES < num_lines || COLS < WIN_MAIN_WIDTH) {
 		exit_with_error(STR_TERMINAL_TOO_SMALL);
 	}
 
@@ -65,6 +69,12 @@ void initialise_curses(void)
 	init_pair(WHITE_GREEN_PAIR, COLOR_WHITE, COLOR_GREEN);
 	refresh();		// Draw stdscr (workaround for windows bug)
 }
+
+void end_curses() {	
+		endwin();		
+}
+
+// Windows functions
 
 /**
  * @brief Create a basic window with an associated panel and a border
@@ -97,6 +107,24 @@ void create_basic_window(WINDOW ** window, PANEL ** panel, int height, int width
 }
 
 /**
+ * @brief Create a sub window
+ * @param parent A pointer to the parent window
+ * @param window A pointer to the pointer to thelocation to store the window data
+ * @param height The height of the window to be created
+ * @param width The width of the window to be created
+ * @param y The y coordinate of the top-left corner of the window
+ * @param x The x coordinate of the top-left corner of the window
+ */
+void create_sub_window (WINDOW * parent, WINDOW ** window, int height, int width, int y, int x) {
+	// Create the window
+	*window = derwin(parent, height, width, y, x);
+
+	if (*window == NULL) {
+		exit_with_error(STR_WINDOW_ERROR);
+	}
+}
+
+/**
  * @brief Create a main window
  * @param window A pointer to a pointer to the location where window data will be stored
  * @param panel A pointer to a pointer to the location where panel data will be stored
@@ -114,16 +142,45 @@ void create_main_window(WINDOW ** window, PANEL ** panel, const char * subtitle)
 }
 
 /**
+ * @brief Create a form window
+ * @param window A pointer to the parent window for the form
+ * @param window A pointer to a pointer to the location where window data will be stored
+ * @param form The uid of the form that will be displayed in this window
+ */
+void create_form_window(WINDOW * parent, WINDOW ** window, form_id_t form) {
+	// Get the associated form
+	hexform_t * form_ptr = get_hexform(form);
+
+	// Create the window
+	create_sub_window(parent, window, form_ptr->form_height, form_ptr->form_width, form_ptr->form_y, form_ptr->form_x);
+}
+
+/**
+ * @brief Create a debug window
+ */
+void create_debug_window(WINDOW ** window) {
+	*window = newwin(DEBUG_WIN_HEIGHT, DEBUG_WIN_WIDTH, DEBUG_WIN_Y, DEBUG_WIN_X);
+	wbkgd(*window, COLOR_PAIR(BLACK_GREEN_PAIR));
+	debug_message("Debug window initialised!");
+	wrefresh(*window);
+}
+
+/**
  * @brief Create all the permanant windows
  */
 void initialise_windows(void) {
 	for (int i = 0; i < ARRAY_SIZE(hexwindows); i++) {
-		// struct hexwindow ws = hexwindows[i];
 		switch (hexwindows[i].w_cat) {
 			case WT_MAIN:
-				create_main_window(&hexwindows[i].w_ptr, &hexwindows[i].p_ptr, hexwindows[i].subtitle);
+				create_main_window(&hexwindows[i].w_ptr, &hexwindows[i].p_ptr, ((main_window_t *)hexwindows[i].window_data)->subtitle);
 				break;
-		}
+			case WT_FORM:
+				create_form_window(hexwindows[hexwindows[i].parent_id].w_ptr, &hexwindows[i].w_ptr, ((form_window_t *)hexwindows[i].window_data)->form);
+				break;
+			case WT_DEBUG:
+				create_debug_window(&hexwindows[i].w_ptr);
+				break;
+			}
 	}
 }
 
@@ -146,125 +203,123 @@ hexwindow_t * get_hexwindow(window_id_t win_id) {
  * @param win_id The unique ID of the window to be shown
  */
 void show_window(window_id_t win_id) {
-	hexwindow_t * hex_win = get_hexwindow(win_id);
+	hexwindow_t *hex_win = get_hexwindow(win_id);
 
 	// Update the window
 	wrefresh(hex_win->w_ptr);
 
-	// Show the panel
-	top_panel(hex_win->p_ptr);
-	update_panels();
-	doupdate();
+	// Show the panel, if there is one for this window
+	if (hex_win->p_ptr != NULL) {		
+		top_panel(hex_win->p_ptr);
+		update_panels();
+		doupdate();
+	}
 }
 
 /**
- * @brief Create the menus
+ * @brief Get lowest common window
+ * @param win_id_1 The unique ID of the first window
+ * @param win_id_2 The unique ID of the second window
+ * @returns The ID of the lowest common window or null if none was found
  */
-void initialise_menus() {
-	for (int i = 0; i < ARRAY_SIZE(hexmenus); i++) {
-		
-		// Create the menu items
-		hexmenus[i].menu_items = (ITEM **) calloc(hexmenus[i].num_items, sizeof(ITEM *));
-		
-		if (hexmenus[i].menu_items == NULL) {
-			exit_with_error(STR_MENU_ERROR);
-		}
+window_id_t get_lowest_common_window(window_id_t win_id_1, window_id_t win_id_2) {
+	
+	window_id_t match = WIN_NONE;	// Will be set to lowest matching window if found
+	bool match_failed = false;		// Will be set to true if no match found
 
-		for (int j = 0; j < hexmenus[i].num_items; j++) {
-			hexmenus[i].menu_items[j] = new_item(hexmenus[i].item_list[j], hexmenus[i].item_list[j]);
+	// Create temporary stores for current windows while walking the tree
+	window_id_t current_win_1 = win_id_1;
+	window_id_t current_win_2 = win_id_2;
 
-			if (j < hexmenus[i].num_items - 1 && hexmenus[i].menu_items[j] == NULL) {
-				exit_with_error(STR_MENU_ERROR);
+	// Walk the tree to try and find a match
+	do {
+		// If the current IDs match, we're done
+		if (current_win_1 == current_win_2) {
+			match = current_win_1;
+		} else {
+			// Otherwise get the parent of the current window 2
+			window_id_t next_win_2 = get_hexwindow(current_win_2)->parent_id;
+			if (next_win_2 != WIN_NONE) {
+				// If there is a parent, this is what we'll compare next
+				current_win_2 = next_win_2;
+			} else {
+				// If there isn't, reset window 2 and get the parent of current window 1
+				current_win_2 = win_id_2;
+				window_id_t next_win_1 = get_hexwindow(current_win_1)->parent_id;
+				if (next_win_1 != WIN_NONE) {
+					// If there is a parent, this is what we'll compare next
+					current_win_1 = next_win_1;
+				} else {
+					// If there isn't, we've explored the whole tree without finding a match
+					match_failed = true;
+				}
 			}
 		}
 
-		// Create the menu
-		hexmenus[i].menu = new_menu((ITEM **)hexmenus[i].menu_items);
+	} while (match == WIN_NONE && !match_failed);
 
-		if (hexmenus[i].menu == NULL) {
-			exit_with_error(STR_MENU_ERROR);
-		}
-
-		// Add menu to the relevant window
-		hexwindow_t * menu_window = get_hexwindow(hexmenus[i].window);
-		set_menu_win(hexmenus[i].menu, menu_window->w_ptr);
-		hexmenus[i].subwindow = derwin(menu_window->w_ptr, hexmenus[i].menu_height, hexmenus[i].menu_width, hexmenus[i].menu_y, hexmenus[i].menu_x);
-
-		if (hexmenus[i].subwindow == NULL) {
-			exit_with_error(STR_MENU_ERROR);
-		}
-
-		set_menu_sub(hexmenus[i].menu, hexmenus[i].subwindow);
-		set_menu_mark(hexmenus[i].menu, STR_MENU_MARK);
-
-		// Post the menu
-		post_menu(hexmenus[i].menu);
-	}
+	// Return a match if we found one, or WIN_NONE if we didn't
+	return match;
 }
 
-/**
- * @brief Safely destroy the game menus
+/** 
+ * @brief Write to rect
+ * @param prompt A pointer to the prompt string to be displayed
  */
-void destroy_menus() {
-	for (int i = 0; i < ARRAY_SIZE(hexmenus); i++) {
-		unpost_menu(hexmenus[i].menu);
-		free_menu(hexmenus[i].menu);
-		
-		for (int j = 0; j < hexmenus[i].num_items; j++) {
-			free_item(hexmenus[i].menu_items[j]);	
-		}		
+void write_to_rect(window_id_t win_id, char * text, int start_y, int start_x, int max_height, int max_width) {
+	clear_rect(win_id, start_y, start_x, max_height, max_width, ' ');
+
+	WINDOW * win = get_hexwindow(win_id)->w_ptr;
+	int current_y = start_y - 1;
+	int current_count = max_width;
+
+	char *string_to_tokensise = calloc(strlen(text + 1), sizeof(char));
+	strcpy(string_to_tokensise, text);
+
+	char * next_word = strtok(string_to_tokensise," ");
+	
+	while (next_word != NULL)
+	{
+		int word_length = strlen(next_word) + 1;
+
+		if (current_count + word_length > max_width) {
+			current_count = 0;
+			current_y++;
+
+			if (current_y - start_y > max_height) {
+				break;
+			}
+
+			wmove(win, current_y, start_x);
+		} else {
+			current_count += word_length + 1;
+		}
+
+		waddstr(win, next_word);
+		waddch(win, ' ');
+		next_word = strtok(NULL, " ");
 	}
+
+	free(string_to_tokensise);
 }
 
-/**
- * @brief Return a pointer to the struct that matches the menu uid or NULL if no match is found
- * @param m_id The unique ID of the required menu
- * @returns A pointer to the structure describing the menu or NULL if a match cannot be found
+/** 
+ * @brief Clears a rectangular area in a given window to a given character
+ * @param win_id The id of the target window
+ * @param start_y The row to start at
+ * @param start_x The column to start at
+ * @param height The height of the rect to clear
+ * @param width The width of the rect to clear
+ * @param clr_char	The character to set the cleared area to 
  */
-hexmenu_t * get_hexmenu(menu_id_t m_id) {
-	for (int i = 0; i < ARRAY_SIZE(hexmenus); i++) {
-		if (hexmenus[i].uid == m_id) {
-			return &hexmenus[i];
+void clear_rect(window_id_t win_id, int start_y, int start_x, int height, int width, char clr_char) {
+	WINDOW * win = get_hexwindow(win_id)->w_ptr;
+
+	for (int i = 0; i < height; i++) {
+		wmove(win, start_y + i, start_x);
+		for (int j = 0; j < width; j++) {
+			waddch(win, clr_char);
 		}
 	}
-
-	return NULL;
 }
 
-/**
- * @brief Handle navigation for the given menu and return the index of the selected item
- * @param m_id The unique ID of the menu to be navigated
- * @returns An int indicating the position of the selected item (0 = top item in list)
- */
-int menu_navigation(menu_id_t m_id) {
-	hexmenu_t * m_ptr = get_hexmenu(m_id);
-	hexwindow_t * ws_ptr = get_hexwindow(m_ptr->window);
-	int c;
-
-	while ((c = wgetch(ws_ptr->w_ptr)) != '\n') {
-		switch(c) {
-			case KEY_DOWN:
-				menu_driver(m_ptr->menu, REQ_DOWN_ITEM);
-				break;
-			case KEY_UP:
-				menu_driver(m_ptr->menu, REQ_UP_ITEM);
-				break;
-			case KEY_HOME:
-				menu_driver(m_ptr->menu, REQ_FIRST_ITEM);
-				break;
-			case KEY_END:
-				menu_driver(m_ptr->menu, REQ_LAST_ITEM);
-				break;
-		}
-		
-		show_window(m_ptr->window);
-	}
-
-	for (int i = 0; i < m_ptr->num_items; i++) {
-		if (current_item(m_ptr->menu) == m_ptr->menu_items[i]) {
-			return i;
-		}
-	}
-
-	return -1;
-}

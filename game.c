@@ -5,7 +5,6 @@
  */
 
 #include "hexapawn.h"
-#include "hexstrings.h"
 
 static char_run_t * empty_sprite = NULL;
 static char_run_t * pawn_sprite = NULL;
@@ -53,6 +52,8 @@ void play_game(game_mode_t mode) {
 		{2, ' '}
 	};
 
+	char *temp_str = calloc(30, sizeof(char));
+
 	//Temporary fix to stop resume game breaking
 	mode = GAME_MODE_NEW;
 
@@ -65,7 +66,64 @@ void play_game(game_mode_t mode) {
 
 	draw_board();
 	show_window(WIN_GAME);
-	while(wgetch(get_hexwindow(WIN_GAME)->w_ptr) != 'x');
+	show_window(WIN_MOVE_FORM);
+
+	int choice;
+
+	curs_set(1);		// Switch on the cursor
+
+	display_prompt(STR_ENTER_MOVE);
+	reset_form(FORM_PLAYER_MOVE, false);
+
+	do {
+		//choice = menu_navigation(MENU_PLAY);
+		choice = navigation_dispatch(MENU_PLAY, FORM_PLAYER_MOVE);
+
+		if (choice == PLAY_MOVE) {
+			char * from_ptr = get_form_field_pointer(FORM_PLAYER_MOVE, 0);
+			char * to_ptr = get_form_field_pointer(FORM_PLAYER_MOVE, 1);
+
+			int from = get_cell_number(from_ptr);
+			int to = get_cell_number(to_ptr);
+
+			if (from < 1 || to < 1 || from > 9 || to > 9) {
+				display_prompt(STR_ENTER_VALID_MOVE);
+				reset_form(FORM_PLAYER_MOVE, true);
+			} else {
+				sprintf(temp_str, "You're moving from %i to %i!", from, to);
+				display_prompt(temp_str);
+				reset_form(FORM_PLAYER_MOVE, false);
+			}
+		}
+
+	} while (choice != PLAY_EXIT);
+
+	curs_set(0); // Switch off the cursor
+	free(temp_str);
+}
+
+/** 
+ * @brief Gets a cell number from the given field buffer
+ * @param buffer A pointer to buffer for a form field
+ * @returns An integer number that was entered or -1 if a non-integer was entered
+ */
+int get_cell_number(char * buffer) {
+	errno = 0;
+	long val = strtol(buffer, NULL, 10);
+
+	if (errno == EINVAL) {
+		return -1;
+	}
+
+	return (int)val;
+}
+
+/** 
+ * @brief Displays a prompt
+ * @param prompt A pointer to the prompt string to be displayed
+ */
+void display_prompt(char * prompt) {
+	write_to_rect(WIN_GAME, prompt, GAME_PROMPT_Y, GAME_PROMPT_X, GAME_PROMPT_HEIGHT, GAME_PROMPT_WIDTH);
 }
 
 /** 

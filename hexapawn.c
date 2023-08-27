@@ -5,9 +5,11 @@
  */
 
 #include "hexapawn.h"
-#include "hexstrings.h"
 
 int main(void) {
+	// Switch on debug mode - REMOVE THIS FOR PRODUCTION
+	set_debug_mode(true);
+
 	// Setup data structure
 	initialise_game_data();
 
@@ -17,15 +19,17 @@ int main(void) {
 	// Build the game windows
 	initialise_windows();
 
-	// Build the menus
+	// Build the menus and forms
 	initialise_menus();
+	initialise_forms();
 
 	// Start the main menu
 	main_menu_controller();
 
 	// End ncurses
+	destroy_forms();
 	destroy_menus();
-	endwin();
+	end_curses();
 
 	// Close game data
 	close_game_data();

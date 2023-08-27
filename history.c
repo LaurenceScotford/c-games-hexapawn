@@ -6,7 +6,6 @@
 //
 
 #include "hexapawn.h"
-#include "hexstrings.h"
 
 void history_controller() {
 	show_window(WIN_HISTORY);

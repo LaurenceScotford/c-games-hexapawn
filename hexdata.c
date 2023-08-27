@@ -5,7 +5,6 @@
  */
 
 #include "hexapawn.h"
-#include "hexstrings.h"
 
 apr_pool_t * hex_data_pool;
 games_list_t * games_list; 

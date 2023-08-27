@@ -5,7 +5,6 @@
  */
 
 #include "hexapawn.h"
-#include "hexstrings.h"
 
 /**
  * @brief Converts a single digit board position to a y and x position on the board

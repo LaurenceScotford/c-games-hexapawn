@@ -6,7 +6,6 @@
 //
 
 #include "hexapawn.h"
-#include "hexstrings.h"
 
 void instructions_controller() {
 	show_window(WIN_INSTRUCTIONS);
