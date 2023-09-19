@@ -41,7 +41,7 @@ hexgame_t * create_new_game() {
 	new_game->next_player = PIECE_WHITE;
 	new_game->state = STATE_IN_PROGRESS;
     new_game->moves = apr_palloc(hex_data_pool, sizeof(moves_list_t));
-	APR_RING_INIT(new_game->moves, _hexmove_t, link);
+	APR_RING_INIT(new_game->moves, _hexmove_record_t, link);
 	new_game->start_time = apr_time_now();
 	APR_RING_INSERT_TAIL(games_list, new_game, _hexgame_t, link);
 	return new_game;	

@@ -9,7 +9,7 @@ out = -o ../hexapawn
 
 build:
 	@echo "Building hexapawn..."
-	gcc $(files) $(incs) $(libs) $(out)
+	gcc $(files) $(incs) $(libs) $(out) -Doff64_t=__off64_t
 
 debug:
 	@echo "Building hexapawn with debugging symbols..."

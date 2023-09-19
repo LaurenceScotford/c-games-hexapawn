@@ -127,8 +127,9 @@ hexmenu_t * get_hexmenu(menu_id_t m_id) {
 }
 
 /**
- * @brief Handle navigation for the given menu (and possibly form) and return the index of the selected item
+ * @brief Handle navigation for the given menu and return the index of the selected item
  * @param m_id The unique ID of the menu to be navigated
+ * @param c The numeric representation of the character passed through from the navigation function
  * @returns A nav_ouput struct indicating if navigation should continue and the
  * 			position of the selected item (0 = top item in list) if it should not
  */

@@ -65,8 +65,10 @@ void initialise_curses(void)
 	keypad(stdscr, TRUE);	// Enable special keyboard characters
 	curs_set(0);		// Switch off the cursor
 	start_color();	// Initialise colour mode
+	init_pair(BLACK_MAGENTA_PAIR, COLOR_BLACK, COLOR_MAGENTA);
+	init_pair(WHITE_MAGENTA_PAIR, COLOR_WHITE, COLOR_MAGENTA);
 	init_pair(BLACK_GREEN_PAIR, COLOR_BLACK, COLOR_GREEN);
-	init_pair(WHITE_GREEN_PAIR, COLOR_WHITE, COLOR_GREEN);
+	
 	refresh();		// Draw stdscr (workaround for windows bug)
 }
 

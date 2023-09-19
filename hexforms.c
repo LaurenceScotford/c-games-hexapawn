@@ -119,6 +119,7 @@ void destroy_forms() {
 /**
  * @brief Handle navigation for the given form
  * @param f_id The unique ID of the form to be navigated
+ * @param c The numeric representation of the character passed through from the navigation function
  * @returns A nav_ouput struct indicating that navigation should continue
  */
 nav_output_t form_navigation(form_id_t f_id, int c) {

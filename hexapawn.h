@@ -102,7 +102,8 @@ typedef enum _game_state_t {
  */
 typedef enum _hex_colour_pairs_t {
 	BLACK_GREEN_PAIR = 1,
-	WHITE_GREEN_PAIR
+	WHITE_MAGENTA_PAIR,
+	BLACK_MAGENTA_PAIR
 } hex_colour_pairs_t;
 
 /**
@@ -209,7 +210,6 @@ typedef struct _hexmenu_t {
 	MENU * menu;					///< A pointer to the menu data
 	ITEM ** menu_items;				///< A pointer to an array of menu items
 	form_id_t form;					///< The ID of a form associated with this menu
-	// ui_position_t form_position;	///< The relative position of a form associated with this menu
 	int menu_y;						///< The y position of the menu in the subwindow
 	int menu_x;						///< The x position of the menu in the subwindow
 	int menu_height;				///< The height of the menu	
@@ -245,22 +245,29 @@ typedef struct _form_window_t {
 	form_id_t form;	///< The uid of the form displayed in this window
 } form_window_t;
 
+/**
+ * @brief Describes the data for a move
+ */
+typedef struct _hexmove_t {
+	int from;	///< The location the piece moved from
+	int to;		///< The location the piece moved to
+} hexmove_t;
+
 // Model structures
 
 /**
  * @brief Describes a single move in a game - used in an APR ring type (cyclic linked list)
  */
-typedef struct _hexmove_t {
+typedef struct _hexmove_record_t {
 	APR_RING_ENTRY(_hexmove_t) link;	///< Holds the links to the neighbouring elements in the linked list
-	int from;							///< The location the piece moved from
-	int to;								///< The location the piece moved to
-} hexmove_t;
+	hexmove_t move;						///< The move
+} hexmove_record_t;
 
 /**
  * @brief APR linked list that holds the move history for a game
  */
 typedef struct _moves_list_t moves_list_t;
-APR_RING_HEAD(_moves_list_t, _hexmove_t);
+APR_RING_HEAD(_moves_list_t, _hexmove_record_t);
 
 /**
  * @brief Describes an entire game of Hexapawn - used in an APR Ring type (cyclic linked list)
@@ -269,7 +276,7 @@ typedef struct _hexgame_t {
 	APR_RING_ENTRY(_hexgame_t) link;	///< Holds the links to the neighbouring elements in the linked list
 	piece_t board[9];					///< An array holding the current configuration of the board
 	apr_time_t start_time;				///< A time stamp recording when the game started
-	apr_time_t end_time;				///< A time stamp recording when the gaem ended
+	apr_time_t end_time;				///< A time stamp recording when the game ended
 	piece_t next_player;				///< The player due to play next
 	game_state_t state;					///< The current state of the game
 	moves_list_t * moves;				///< A pointer to a cyclic linked list with the move history for the game
@@ -293,8 +300,8 @@ typedef struct _position_t {
  * @brief Describes the output from a navigation action
  */
 typedef struct _nav_output_t {
-	bool in_nav;	// True if navigation should continue
-	int output;		// The value to be passed back to the caller
+	bool in_nav;	///< True if navigation should continue
+	int output;		///< The value to be passed back to the caller
 } nav_output_t;
 
 // Function-like macros

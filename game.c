@@ -26,6 +26,7 @@ void resume_game_controller() {
 
 /** 
  * @brief Sets up and plays a game in the requested mode
+ * @param mode An enum (GAME_MODE_NEW or GAME_MODE_RESUME) to indicate the game mode
  */
 void play_game(game_mode_t mode) {
 	empty_sprite = (char_run_t[EMPTY_SPRITE_DATA_LENGTH]){
@@ -52,8 +53,6 @@ void play_game(game_mode_t mode) {
 		{2, ' '}
 	};
 
-	char *temp_str = calloc(30, sizeof(char));
-
 	//Temporary fix to stop resume game breaking
 	mode = GAME_MODE_NEW;
 
@@ -68,38 +67,73 @@ void play_game(game_mode_t mode) {
 	show_window(WIN_GAME);
 	show_window(WIN_MOVE_FORM);
 
-	int choice;
+	hexmove_t player_move;
 
+	// While game in progress
+	while (current_game->state == STATE_IN_PROGRESS) {
+			// if current player is white
+			if (current_game->next_player == PIECE_WHITE) {
+				player_move = get_player_move();
+			} else {
+				// TO DO: Get AI move
+			}
+
+			// If player has resigned...
+			if (player_move.from == -1 && player_move.to == -1) {
+				// ... set status to end game
+				current_game->state = STATE_ENDED_RESIGNED;
+			} else {
+				// Make move
+				move_piece(player_move.from, player_move.to);
+			}
+			
+			// TO DO: If win condition 
+				// Show win statement
+				// End game
+			// Else switch player
+	}	
+}
+
+/**
+ * @brief Get a player move
+ * @returns A move entered by the player (will bet set to -1 -1 if the player is resigning)
+*/
+hexmove_t get_player_move() {
+	int choice;
+	hexmove_t move;
+	bool valid_move = true;
+	
 	curs_set(1);		// Switch on the cursor
 
 	display_prompt(STR_ENTER_MOVE);
 	reset_form(FORM_PLAYER_MOVE, false);
 
+
 	do {
-		//choice = menu_navigation(MENU_PLAY);
 		choice = navigation_dispatch(MENU_PLAY, FORM_PLAYER_MOVE);
 
 		if (choice == PLAY_MOVE) {
 			char * from_ptr = get_form_field_pointer(FORM_PLAYER_MOVE, 0);
 			char * to_ptr = get_form_field_pointer(FORM_PLAYER_MOVE, 1);
 
-			int from = get_cell_number(from_ptr);
-			int to = get_cell_number(to_ptr);
+			move.from = get_cell_number(from_ptr);
+			move.to = get_cell_number(to_ptr);
 
-			if (from < 1 || to < 1 || from > 9 || to > 9) {
-				display_prompt(STR_ENTER_VALID_MOVE);
-				reset_form(FORM_PLAYER_MOVE, true);
-			} else {
-				sprintf(temp_str, "You're moving from %i to %i!", from, to);
-				display_prompt(temp_str);
-				reset_form(FORM_PLAYER_MOVE, false);
+			if (choice == PLAY_MOVE) {
+				valid_move = validate_player_move(move.from, move.to);
 			}
 		}
 
-	} while (choice != PLAY_EXIT);
+	} while (!(choice == PLAY_EXIT || choice == PLAY_MOVE) || !valid_move);
+
+	if (choice == PLAY_EXIT) {
+		move.from = -1;
+		move.to = -1;
+	}
 
 	curs_set(0); // Switch off the cursor
-	free(temp_str);
+
+	return move;
 }
 
 /** 
@@ -119,6 +153,83 @@ int get_cell_number(char * buffer) {
 }
 
 /** 
+ * @brief Validates a move and shows an error message if the move is invalid
+ * @param from The cell the player is trying to move from
+ * @param to The cell the player is trying to move to
+ * @returns True if the move is valid, False otherwise
+ */
+bool validate_player_move(int from, int to) {
+	bool is_valid_move = false;
+	int move_offset = from - to;
+	int file = get_file(from);
+
+	// Check move is within the board bounds
+	if (from < 1 || to < 1 || from > 9 || to > 9) {
+		display_prompt(STR_ENTER_VALID_MOVE);
+	} else if (get_piece_at(from) != PIECE_WHITE) {
+		// There is no white piece at the selected from cell
+		display_prompt(STR_NO_WHITE);
+	} else if (move_offset == 3) {
+		// Player is moving forward one square
+		piece_t piece_at_dest = get_piece_at(to);
+		if (piece_at_dest == PIECE_WHITE) {
+			display_prompt(STR_CELL_OCCUPIED);
+		} else if (piece_at_dest == PIECE_BLACK) {
+			display_prompt(STR_INVALID_CAPTURE);
+		} else {
+			is_valid_move = true;
+		}
+	} else if ((file == 1 && move_offset == 2) || (file == 2 && (move_offset == 2 || move_offset == 4)) || (file = 3 && move_offset == 4)) {
+		// Player is moving diagonally
+		if (get_piece_at(to) != PIECE_BLACK) {
+			// Diagonal move doesn't lead to capture
+			display_prompt(STR_DIAGONAL_NO_CAPTURE);
+		} else {
+			is_valid_move = true;
+		}
+	} else {
+		// Player is attempting to move to an invalid position
+		display_prompt(STR_INVALID_MOVE);
+	}
+
+	if (is_valid_move) {
+		reset_form(FORM_PLAYER_MOVE, false);
+	} else {
+		reset_form(FORM_PLAYER_MOVE, true);
+	}
+
+	return is_valid_move;
+}
+
+/** 
+ * @brief Returns the piece at a given cell in the current game
+ * @param cell The number of the cell to interrogate
+ * @returns The piece at the selected cell
+ */
+piece_t get_piece_at(int cell) {
+	return current_game->board[cell - 1];
+}
+
+/** 
+ * @brief Sets the piece at the given cell
+ * @param cell The number of the cell to set the piece
+ * @param piece The piece to set at that cell
+ */
+void set_piece_at(int cell, piece_t piece) {
+	current_game->board[cell - 1] = piece;
+}
+
+/** 
+ * @brief Returns the file for a given cell
+ * @param cell The number of the cell to interrogate
+ * @returns The file from 1(left) to 3(right) 
+ */
+int get_file(int cell) {
+	int modulus = cell % 3;
+	return modulus == 0 ? 3 : modulus; 
+}
+
+/** 
  * @brief Displays a prompt
  * @param prompt A pointer to the prompt string to be displayed
  */
@@ -127,11 +238,24 @@ void display_prompt(char * prompt) {
 }
 
 /** 
+ * @brief Moves a piece
+ * @param from The number of the cell to move from
+ * @param to The number of the cell to move to
+ */
+void move_piece(int from, int to) {
+	piece_t piece_to_move = get_piece_at(from);
+	set_piece_at(from, PIECE_EMPTY);
+	set_piece_at(to, piece_to_move);
+	draw_piece(from, PIECE_EMPTY); 
+	draw_piece(to, piece_to_move); 
+}
+
+/** 
  * @brief Draws the game board
  */
 void draw_board() {
 	WINDOW * win = get_hexwindow(WIN_GAME)->w_ptr;
-	wattron(win, COLOR_PAIR(WHITE_GREEN_PAIR));
+	wattron(win, COLOR_PAIR(WHITE_MAGENTA_PAIR));
 
 	// Draw horizontal dividers and cross pieces
 	for (int i = 0; i <= GRID_SIZE_Y; i++) {
@@ -161,11 +285,11 @@ void draw_board() {
 		mvwaddch(win, y_pos, x_pos, '1' + i);
 	}
 	
-	wattroff(win, COLOR_PAIR(WHITE_GREEN_PAIR)); 
+	wattroff(win, COLOR_PAIR(WHITE_MAGENTA_PAIR)); 
 
 	// Draw the correct piece in each position on the board
-	for (int i = 0; i < GRID_SIZE_Y * GRID_SIZE_X; i++) {
-		draw_piece(i, current_game->board[i]);
+	for (int i = 1; i <= GRID_SIZE_Y * GRID_SIZE_X; i++) {
+		draw_piece(i, get_piece_at(i));
 	}
 }
 
@@ -206,7 +330,7 @@ void draw_vert_board_divider(int x) {
 
 /**
  * @brief Draws a single piece on the board
- * @param location A number representing the board cell in which to draw the piece (0-9)
+ * @param location A number representing the board cell in which to draw the piece (1-9)
  * @param piece_type The type of piece to draw
  */
 void draw_piece(int location, piece_t piece_type) {
@@ -215,10 +339,10 @@ void draw_piece(int location, piece_t piece_type) {
 
 	WINDOW * win = get_hexwindow(WIN_GAME)->w_ptr;
 
-	wattron(win, COLOR_PAIR(piece_type == PIECE_BLACK ? BLACK_GREEN_PAIR : WHITE_GREEN_PAIR));
+	wattron(win, COLOR_PAIR(piece_type == PIECE_BLACK ? BLACK_MAGENTA_PAIR : WHITE_MAGENTA_PAIR));
 
 	// Calculate position of top left character in sprite
-	position_t pos = get_position(location);
+	position_t pos = get_position(location - 1);
 	int y_pos = BOARD_Y + 1 + pos.y * BOARD_CELL_HEIGHT + pos.y;
 	int x_pos = BOARD_X + 1 + pos.x * BOARD_CELL_WIDTH + pos.x;
 
@@ -247,5 +371,5 @@ void draw_piece(int location, piece_t piece_type) {
 		}
 	}
 				
-	wattroff(win, COLOR_PAIR(piece_type == PIECE_BLACK ? BLACK_GREEN_PAIR : WHITE_GREEN_PAIR));
+	wattroff(win, COLOR_PAIR(piece_type == PIECE_BLACK ? BLACK_MAGENTA_PAIR : WHITE_MAGENTA_PAIR));
 }
